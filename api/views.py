@@ -4,7 +4,8 @@ import requests
 from django.http import JsonResponse
 
 from base.views import JsonView, HttpBasicView
-from mapp.models import MiniApp, MiniAppUser
+from mapp.models import MiniApp, MiniAppUser, MiniToken
+from store.models import Store
 
 
 class TokenView(HttpBasicView):
@@ -56,6 +57,33 @@ class StoreListView(JsonView):
 
     def get(self, request, **kwargs):
         result = {
+            'code': -1,
+            'message': '未知错误',
+            'data': None
+        }
+
+        token = request.GET.get('token')
+        if token:
+            token = MiniToken.objects.get(token=token)
+        else:
+            return JsonResponse(result)
+
+        if token.update_status() is False:
+            result['message'] = 'token已经过期，请重新获取'
+            return JsonResponse(result)
+
+        stores = Store.objects.filter(mall=token.user.source.belongs_to, enabled=True)
+        data = []
+        for s in stores:
+            data.append({
+                'id': s.id,
+                'order': s.order,
+                'title': s.title,
+                'image': s.logo,
+            })
+        result['data'] = data
+
+        result = {
             'code': 0,
             'message': '请求成功',
             'data': [
@@ -80,6 +108,36 @@ class StoreView(JsonView):
 
     def get(self, request, store_id=None, **kwargs):
         result = {
+            'code': -1,
+            'message': '未知错误',
+            'data': None
+        }
+
+        token = request.GET.get('token')
+        if token:
+            token = MiniToken.objects.get(token=token)
+        else:
+            return JsonResponse(result)
+
+        if token.update_status() is False:
+            result['message'] = 'token已经过期，请重新获取'
+            return JsonResponse(result)
+
+        try:
+            store = Store.objects.get(pk=store_id, enabled=True)
+        except Store.DoesNotExist:
+            result['message'] = '所查询商铺不存在'
+            return JsonResponse(result)
+
+        data = {
+            'id': store.id,
+            'title': store.title,
+            'images': [store.image],
+            'desc': [i for i in store.desc.split('\n') if i],
+        }
+        result['data'] = data
+
+        result = {
             'code': 0,
             'message': '请求成功',
             'data': {
@@ -99,3 +157,4 @@ class StoreView(JsonView):
             },
         }
         return JsonResponse(result)
+

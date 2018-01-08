@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'user.apps.UserConfig',
     'store.apps.StoreConfig',
     'api.apps.ApiConfig',
+    'mall.apps.MallConfig',
+    'mapp.apps.MappConfig',
 ]
 
 MIDDLEWARE = [
